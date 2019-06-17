@@ -1,0 +1,157 @@
+---
+title: "CUNY 612"
+subtitle: "Project 2"
+author: "mehtablocker"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
+<style type="text/css">
+h3 {
+  color: DarkBlue;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+<br>
+
+###Intro
+
+__For this project we will build two simple recommender systems using the MovieLens dataset.__
+
+<br>
+
+###Load libraries
+
+```{r load_libraries, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidytext)
+library(recommenderlab)
+library(psych)
+library(knitr)
+```
+
+<br>
+
+###Get data
+
+The dataset was procured from kaggle and hosted on Github.
+
+```{r load_tables}
+item_df <- read.delim('https://raw.githubusercontent.com/mehtablocker/cuny_612/master/data_files/MovieLens/u.item', header=F, sep="|")
+item_names_vec <- "movie id | movie title | release date | video release date |
+              IMDb URL | unknown | Action | Adventure | Animation |
+Children's | Comedy | Crime | Documentary | Drama | Fantasy |
+Film-Noir | Horror | Musical | Mystery | Romance | Sci-Fi |
+Thriller | War | Western"
+names(item_df) <- strsplit(item_names_vec, split = "\\|") %>% 
+  sapply(., trimws) %>% as.vector() %>% gsub(" ", "_", .) %>% gsub("\\'", "", .)
+item_df %>% head() %>% kable()
+
+ratings_df <- read.delim('https://raw.githubusercontent.com/mehtablocker/cuny_612/master/data_files/MovieLens/u.data', header=F)
+names(ratings_df) <- c("user_id", "item_id", "rating", "timestamp")
+ratings_df %>% head() %>% kable()
+```
+
+<br>
+
+###Create matrices
+
+We use the tidy dataframes to create an item content matrix and a user-item matrix.
+
+```{r create_mat}
+item_mat <- as.matrix(item_df[ , 7:24])
+
+ui_mat <- ratings_df %>% 
+  arrange(user_id, item_id) %>% 
+  cast_sparse(user_id, item_id, rating) %>% 
+  as.matrix()
+
+item_mat[1:5, 1:5] %>% kable()
+ui_mat[1:5, 1:5] %>% kable()
+```
+
+<br>
+
+###Content based recommender
+
+We create a simple Content-Based Recommender by first finding the Jaccard similarities between all rows of the item matrix.
+
+```{r jac_sim}
+jac_mat <- as(similarity(as(item_mat, "realRatingMatrix"), method = "jaccard"), "matrix")
+jac_mat[1:5, 1:5] %>% kable()
+```
+
+Then we recommend three movies to an example user by finding a movie they rated "5" and looking up the top three Jaccard similarities for that movie which the user has not yet seen.
+
+```{r top_three_jac}
+user_ratings <- ui_mat[1, ]
+movie_id <- which(user_ratings==5)[1] %>% unname()
+movie_id
+similar_ids <- order(jac_mat[movie_id,], decreasing=T)
+sim_ord_user_ratings <- user_ratings[similar_ids]
+reco_ids <- sim_ord_user_ratings[sim_ord_user_ratings==0] %>% head(3) %>% names() %>% as.integer()
+reco_ids
+```
+
+<br>
+
+###Evaluate content
+
+Let's informally evaluate our recommendations for the example user by seeing if they make sense. The first movie_id that the user rated "5" is movie_id 1, which above we can see is "Toy Story." According to our Jaccard similarities cross referenced with the user ratings, the top three most similar movies which the user has not yet seen are:
+
+```{r lookup_recos}
+item_df %>% slice(reco_ids) %>% select(movie_id, movie_title) %>% kable()
+```
+
+For a person who rated "Toy Story" very highly, these seem like pretty good recommendations!
+
+<br>
+
+###Collaborative filtering
+
+Next we create an Item-Based Collaborative Filtering Recommender using the same MovieLens data we have been working with thus far. To do this we will compare the items' similarities by the user ratings rather than any pre-determined features such as genre. Using the user-item matrix from above, we first replace all 0's with NA's (to signify movies that were not rated by particular users) and then create a Pearson correlation matrix for all movies (setting a minimum threshold for sample size.) This is just like the Jaccard similarities matrix above except now we are comparing movies by user ratings rather than genre, we are using a different distance metric since our data is no longer binary.
+
+```{r ui_cor_mat}
+ui_mat[ui_mat==0] <- NA
+min_n <- 20
+corr_obj <- suppressWarnings(corr.test(ui_mat, ci=F))
+cor_mat <- corr_obj$r
+cor_mat[which(corr_obj$n < min_n)] <- NA
+```
+
+We can now, for example, find a user who rated "Toy Story" very highly, just as we did above. Then using the item correlation matrix we could recommend the top three most similar movies that the user has not yet seen.  
+
+```{r cor_mat_reco}
+user_ratings <- ui_mat[1, ]
+movie_id <- which(user_ratings==5)[1] %>% unname()
+movie_id
+similar_ids <- order(cor_mat[, movie_id], decreasing=T)
+sim_ord_user_ratings <- user_ratings[similar_ids]
+reco_ids <- sim_ord_user_ratings[is.na(sim_ord_user_ratings)] %>% head(3) %>% names() %>% as.integer()
+reco_ids
+item_df %>% slice(reco_ids) %>% select(movie_id, movie_title) %>% kable()
+```
+
+These also seem like reasonable recommendations.
+
+<br>
+
+###Ratings predictions
+
+We can more formally evaluate our model by calculating numerical ratings predictions for the movies a user has not seen. 
+
+<br>
+
+###Summary
+
+We created simple versions of a Content Based Recommender and a Collaborative Filtering Recommender. The benefits of the former are that one does not need other users' information in order to make a recommendation. The downsides are that the features ("movie genres", in this example) need to be well determined and tagged in advance. The benefits of the latter are that our model is not determined by how well we feature engineer. The downsides are that we need all other users' data, so we suffer from a "cold start" problem where we cannot start using the model until we have a reasonably large amount of data.
