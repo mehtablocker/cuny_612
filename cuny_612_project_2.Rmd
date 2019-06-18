@@ -119,7 +119,7 @@ For a person who rated "Toy Story" very highly, these seem like pretty good reco
 
 ###Collaborative filtering
 
-Next we create an Item-Based Collaborative Filtering Recommender using the same MovieLens data we have been working with thus far. To do this we will compare the items' similarities by the user ratings rather than any pre-determined features such as genre. Using the user-item matrix from above, we first replace all 0's with NA's (to signify movies that were not rated by particular users) and then create a Pearson correlation matrix for all movies (setting a minimum threshold for sample size.) This is just like the Jaccard similarities matrix above except now we are comparing movies by user ratings rather than genre, we are using a different distance metric since our data is no longer binary.
+Next we create an Item-Based Collaborative Filtering Recommender using the same MovieLens data. To do this we will compare the items' similarities according to the user ratings rather than any pre-determined features such as genre. Using the user-item matrix from above, we first replace all 0's with NA's (to signify movies that were not rated by particular users) and then create a Pearson correlation matrix for all movies (setting a minimum threshold for sample size.) This is just like the Jaccard similarities matrix above except now we are comparing movies by user ratings rather than genre, and we are using a different distance metric since our data is no longer binary.
 
 ```{r ui_cor_mat}
 ui_mat[ui_mat==0] <- NA
@@ -129,7 +129,7 @@ cor_mat <- corr_obj$r
 cor_mat[which(corr_obj$n < min_n)] <- NA
 ```
 
-We can now, for example, find a user who rated "Toy Story" very highly, just as we did above. Then using the item correlation matrix we could recommend the top three most similar movies that the user has not yet seen.  
+We can now, for example, find a user who rated "Toy Story" very highly, just as we did above. Then using the item correlation matrix we can recommend the top three most similar movies that the user has not yet seen.  
 
 ```{r cor_mat_reco}
 user_ratings <- ui_mat[1, ]
@@ -142,16 +142,66 @@ reco_ids
 item_df %>% slice(reco_ids) %>% select(movie_id, movie_title) %>% kable()
 ```
 
-These also seem like reasonable recommendations.
+The first two seem like reasonable recommendations, but the third is a bit out of place.
 
 <br>
 
 ###Ratings predictions
 
-We can more formally evaluate our model by calculating numerical ratings predictions for the movies a user has not seen. 
+We can more formally evaluate our model by calculating numerical ratings predictions for the movies a user has not seen. We do this by splitting the data into train and test sets, re-running the correlation matrix on the training data, using the correlation matrix to calculate predicted ratings, and evaluating the predictions on the test data.
+
+```{r rat_pred}
+### Create test and train indexes
+pct_test <- 0.2
+n_test <- round( pct_test * sum(!is.na(ui_mat)), 0)
+na_ind <- which(is.na(ui_mat))
+test_ind <- sample((1:length(ui_mat))[-na_ind], n_test, replace = F)
+train_ind <- (1:length(ui_mat))[-c(na_ind, test_ind)]
+
+### Break matrix into test and train
+train_mat <- ui_mat
+train_mat[test_ind] <- NA
+test_mat <- ui_mat
+test_mat[train_ind] <- NA
+
+### Create correlation matrix from training data
+corr_obj_train <- suppressWarnings(corr.test(train_mat, ci=F))
+cor_mat_train <- corr_obj_train$r
+cor_mat_train[which(corr_obj_train$n < min_n)] <- NA
+
+### For each user...
+### Dot multiply empirical ratings by correlation matrix (re-centered and squared).
+### Then remove empirical ratings and take column averages to get predicted ratings for each item.
+### Finally, transform the predicted ratings distribution to more closely resemble empirical shape.
+prediction_mat <- matrix(NA, nrow = nrow(train_mat), ncol = ncol(train_mat))
+for (i in 1:nrow(train_mat)){
+  user_pred_mat <- train_mat[i, ] * (cor_mat_train - min(cor_mat_train, na.rm=T))^2
+  diag(user_pred_mat) <- NA
+  user_pred_vec <- colMeans(user_pred_mat, na.rm=T)
+  user_pred_vec_trans <- user_pred_vec  + (median(train_mat[i, ], na.rm=T) - median(user_pred_vec, na.rm=T))
+  user_pred_vec_trans <- pmin(user_pred_vec_trans, 5)
+  prediction_mat[i, ] <- user_pred_vec_trans
+}
+
+### Calculate RMSE on Test data and compare to RMSE of simply predicting the global average every time
+prediction_mat_chance <- matrix(mean(train_mat, na.rm=T), nrow = nrow(train_mat), ncol = ncol(train_mat))
+prediction_mat_chance[which(is.na(prediction_mat))] <- NA
+
+rmse <- function(predicted, observed, rmna=FALSE){
+  sqrt(mean((predicted - observed)^2, na.rm=rmna))
+}
+
+rmse(prediction_mat, test_mat, rmna=T)
+rmse(prediction_mat_chance, test_mat, rmna=T)
+
+```
+
+Our prediction model does not fare much differently than just guessing the average (~3.5) every time, so clearly it needs refinement.
 
 <br>
 
 ###Summary
 
 We created simple versions of a Content Based Recommender and a Collaborative Filtering Recommender. The benefits of the former are that one does not need other users' information in order to make a recommendation. The downsides are that the features ("movie genres", in this example) need to be well determined and tagged in advance. The benefits of the latter are that our model is not determined by how well we feature engineer. The downsides are that we need all other users' data, so we suffer from a "cold start" problem where we cannot start using the model until we have a reasonably large amount of data.
+
+Our ratings prediction model built with the User-Item Matrix and Item Correlation Matrix did not fare much differently than a rudimentary model of guessing the global average every time.
