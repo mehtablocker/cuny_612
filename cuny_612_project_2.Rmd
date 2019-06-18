@@ -170,7 +170,7 @@ cor_mat_train <- corr_obj_train$r
 cor_mat_train[which(corr_obj_train$n < min_n)] <- NA
 
 ### For each user...
-### Dot multiply empirical ratings by correlation matrix (re-centered and squared).
+### Hadamard multiply empirical ratings by correlation matrix (re-centered and squared).
 ### Then remove empirical ratings and take column averages to get predicted ratings for each item.
 ### Finally, transform the predicted ratings distribution to more closely resemble empirical shape.
 prediction_mat <- matrix(NA, nrow = nrow(train_mat), ncol = ncol(train_mat))
