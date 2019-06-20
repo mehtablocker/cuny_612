@@ -1,0 +1,106 @@
+---
+title: "CUNY 612"
+subtitle: "Project 3"
+author: "mehtablocker"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
+<style type="text/css">
+h3 {
+  color: DarkBlue;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+<br>
+
+###Intro
+
+__For this project we will explore the building of recommender systems using the MovieLens dataset and matrix factorization.__
+
+<br>
+
+###Load libraries
+
+```{r load_libraries, message=FALSE, warning=FALSE}
+library(dplyr)
+library(recommenderlab)
+library(knitr)
+```
+
+<br>
+
+###Get data
+
+Data for 100,000 movie ratings is provided in User-Item matrix form in the recommenderlab library. Each row represents a user, and NAs are listed for any movie not rated.
+
+```{r get_data}
+data(MovieLense)
+ui_mat <- as(MovieLense, "matrix")
+ui_mat[1:5, 1:5] %>% kable()
+```
+
+<br>
+
+###Normalize data
+
+Our first step is to normalize the data. To do this we calculate the global mean rating, as well as each user's mean rating and each item's mean rating. We then subtract each of these, appropriately, from every rating in the matrix. This leaves us with a matrix of ratings _over and above_ the "baseline."  
+
+For example, let's say Joe rated "Toy Story" a perfect 5. Now let's also assume the average rating for all movies and users is 3.5, but Toy Story is rated half a point higher (on average) and Joe rates movies a quarter point higher (on average.) Then Joe's normalized rating for Toy Story would be 5 - 3.5 - 0.5 - 0.25 = 0.75.  
+
+Normalizing the data in this fashion has two benefits. One is that it is a way of accounting for "biases" in both users and items. Two is that it allows us to impute zeros into the matrix for all of the NA values. The latter is necessary for performing Singular Value Decomposition, which would not otherwise work if any values were missing.  
+
+```{r norm_data}
+global_mean <- mean(ui_mat, na.rm = T)
+global_mean
+u_bias_vec <- unname(rowMeans(ui_mat, na.rm=T)) - global_mean
+u_bias_mat <- matrix(u_bias_vec, nrow=nrow(ui_mat), ncol=ncol(ui_mat))
+i_bias_vec <- unname(colMeans(ui_mat, na.rm=T)) - global_mean
+i_bias_mat <- matrix(i_bias_vec, nrow=nrow(ui_mat), ncol=ncol(ui_mat), byrow=T)
+baseline <- global_mean - u_bias_mat - i_bias_mat
+ui_mat_norm <- ui_mat - baseline
+ui_mat_norm[is.na(ui_mat_norm)] <- 0
+ui_mat_norm[1:5, 1:5] %>% kable()
+```
+
+<br>
+
+###SVD
+
+We are now ready to factor our normalized ratings matrix via Singular Value Decomposition. This effectively finds latent "factors" (which can be thought of as themes, or concepts or groupings, though they are technically uninterpretable) in the data and tells us how important each factor is, as well as how much each user and each item is related to each factor.  
+This is technically done by searching for the dimension that describes the highest amount of variability, then the second most, third most, etc, all the way to the n most, where n is the rank of the matrix. Since the strength of each dimension is returned, we can then discard the dimensions that do not provide adequate strength. One way we can do this is by setting a reasonable percentage of total strength requirement, and discarding all dimensions that do not meet the requirement.  
+
+Dimensionality reduction essentially compresses the data while keeping most of the important information. This leaves us with a much smaller and easier to work with matrix. But it has also been shown to produce a better prediction model by helping get rid of some of the "noise" in the data.  
+
+```{r sing_val_dec}
+svd_list <- svd(ui_mat_norm)
+### Keep only the first k dimensions that represent some arbitrary percentage of total strength (variability)
+pct_var_threshold <- 0.85
+k <- which(cumsum(svd_list$d)/sum(svd_list$d) > pct_var_threshold)[1]
+k
+u_comp <- svd_list$u[, 1:k]
+d_comp <- svd_list$d[1:k]
+v_comp <- svd_list$v[, 1:k]
+ui_mat_norm_comp <- u_comp %*% diag(d_comp) %*% t(v_comp)
+dimnames(ui_mat_norm_comp) <- dimnames(ui_mat_norm)
+ui_mat_norm_comp[1:5, 1:5] %>% kable()
+```
+
+Armed with our new-and-improved matrix of normalized ratings, we can add back in our baseline that we had previously subtracted. Doing so gives us a matrix of "predicted" ratings for every user-item combination. To keep within our standard 1-5 scale, we round any values below 1 or above 5.
+
+```{r pred_rat_mat}
+ui_mat_pred <- ui_mat_norm_comp + baseline
+ui_mat_pred[ui_mat_pred<1] <- 1
+ui_mat_pred[ui_mat_pred>5] <- 5
+ui_mat_pred[1:5, 1:5] %>% kable()
+```
