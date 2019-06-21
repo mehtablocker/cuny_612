@@ -26,7 +26,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ###Intro
 
-__For this project we will explore the use of matrix factorization in the building of recommender systems for movie ratings.__
+__For this project we will explore the use of matrix factorization methods in the building of collaborative filtering-based recommender systems for movie ratings.__
 
 <br>
 
@@ -43,7 +43,7 @@ library(knitr)
 
 ###Get data
 
-The MovieLens dataset for 100,000 movie ratings is provided in User-Item matrix form in the `recommenderlab` library. Each row represents a user, and NAs are listed for any movie not rated.
+The MovieLens dataset of 100,000 movie ratings is provided in User-Item matrix form in the `recommenderlab` library. Each row represents a user, and NAs are listed for any movie not rated.
 
 ```{r get_data}
 data(MovieLense)
@@ -82,7 +82,7 @@ We are now ready to factor our normalized ratings matrix via Singular Value Deco
 
 This is algebraically done by finding the dimension that describes the highest amount of variability, then the second most, third most, etc, all the way to the r most, where r is the rank of the matrix. Since the strength of each dimension is returned, we can then discard the dimensions that do not provide adequate strength. One way we can do this is by setting an arbitrary percentage of total strength requirement, and discarding all dimensions that do not meet the requirement.  
 
-Dimensionality reduction essentially compresses the data while keeping most of the important information. This leaves us with a much smaller and easier to work with matrix. But it has also been shown to produce a better prediction model by helping get rid of some of the "noise" in the data.  
+Dimensionality reduction essentially compresses the data while keeping most of the important information. This leaves us with a much smaller and easier to work with matrix. But it has also been shown to produce better prediction models by helping get rid of some of the "noise" in the data.  
 
 ```{r sing_val_dec}
 svd_list <- svd(ui_mat_norm)
@@ -172,7 +172,7 @@ rmse_simplest
 
 As expected, the two more advanced models outperformed the very simple model of predicting the global average every time. However, the dimensionality reduction itself did not seem to make a big difference in RMSE. Was the process actually fruitless or did we just choose poorly in our arbitrary number of dimensions to keep?  
 
-That is easy enough to determine. We chose to keep `r k` dimensions, but since we already decomposed the whole matrix we can just loop through various values for k and see how the RMSE changes.
+This is easy enough to determine. We chose to keep `r k` dimensions, but since we already decomposed the whole matrix we can loop through various values for k and see how the RMSE changes.
 
 ```{r plot_k_rmse}
 possible_dim <- length(svd_list_train$d)
@@ -193,8 +193,38 @@ for (i in 1:length(k_values)){
 k_rmse_df <- k_rmse_mat %>% as.data.frame()
 names(k_rmse_df) <- c("k", "RMSE")
 k_rmse_df %>% ggplot(aes(x=k, y=RMSE)) + geom_line()
-best_k <- k_rmse_df %>% filter(RMSE==min(RMSE)) %>% select(k)
-best_k
+best_k_rmse <- k_rmse_df %>% filter(RMSE==min(RMSE))
+best_k_rmse
 ```
 
-The matrix factorization was, in fact, effective. We just chose a poor value for k. We can see above that keeping only `r best_k` dimensions yields the lowest RMSE. It seems somewhat surprising that more compression leads to a better model, but as mentioned earlier this can be due to a reduction of "noise" in the data.
+The matrix factorization was, in fact, effective. We just chose a poor value for k. We can see above that keeping only `r best_k_rmse$k` dimensions yields the lowest RMSE (`r best_k_rmse$RMSE`). It seems somewhat surprising that more compression leads to a better model, but as mentioned earlier this can be due to a reduction of "noise" in the data.
+
+<br>
+
+###Comparison to SGD
+
+Another commonly used matrix factorization method is Stochastic Gradient Descent. Known as "Funk SVD" in this context (after Simon Funk from the Netflix project), it is actually an iterative algorithm designed to closely approximate SVD. The touted benefits are that it can handle missing values and be computationally faster if going from a very large number of dimensions to only a handful. (In this case it was significantly slower than regular SVD, perhaps because our original dimensions are not so enormous.)  
+
+We will run Funk SVD on our training data and compare its RMSE on the test data to our previous methods.  
+
+```{r funk_svd}
+train_mat_norm <- train_mat - baseline   #can go back to keeping NA values
+f_svd_list_train <- funkSVD(train_mat_norm, k = best_k_rmse$k)
+train_mat_norm_comp <- f_svd_list_train$U %*% t(f_svd_list_train$V)
+dimnames(train_mat_norm_comp) <- dimnames(train_mat_norm)
+train_mat_pred <- train_mat_norm_comp + baseline
+train_mat_pred[train_mat_pred<1] <- 1
+train_mat_pred[train_mat_pred>5] <- 5
+rmse_test <- rmse(train_mat_pred, test_mat, rmna=T)
+rmse_test
+```
+
+Our test RMSE has improved again. This method has been the most accurate of the ones we have seen in this example.  
+
+<br>
+
+###Summary
+
+Using a dataset of movie ratings from MovieLens, we built several different collaborative filtering recommender models. First we normalized our data and came up with baselines for users and items. Next we explored dimensionality reduction using different forms of matrix factorization. We evaluated our various models by training them on a subset of the original data and then calculating the RMSE of predictions on the unseen test data.  
+
+Not unexpectedly, a simple model of guessing the global average every time was not particularly accurate. Normalizing for user and item biases was helpful. Further improvement was acheived using matrix factorization methods. Stochastic Gradient Descent (ie, the "Funk SVD" algorithm) proved to be the most accurate in this example.
