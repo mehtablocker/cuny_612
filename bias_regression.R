@@ -37,17 +37,24 @@ i_sums_vec <- colSums(ui_mat, na.rm=T)
 ui_sums_vec <- c(u_sums_vec, i_sums_vec)
 
 ### Set up solvable matrix version of Bayes / ridge regression
-K <- 1
+K <- 3
 A <- ui_mat_bin
 diag(A) <- diag(A) + K
 b <- unname(ui_sums_vec)
 b <- b + c(rep(mean_u_means, length(u_means_vec)), rep(mean_i_means, length(i_means_vec))) * K
+#----------
+#add intercept by adding a row and column to A which is total number of ratings (including the added Bayes ratings) concatenated with diagonal of A (on both sides)
+#and add a value to b which is total sum of ratings (including the added Bayes ratings)
+A <- rbind(cbind(length(which(!is.na(ui_mat))) + length(diag(A))*K, t(diag(A))), cbind(diag(A), A))
+b <- c(sum(u_sums_vec) + sum(c(rep(mean_u_means, length(u_means_vec)), rep(mean_i_means, length(i_means_vec))) * K), b)
+#----------
 x <- solve(A, b)
 
 ### Use values to predict
 ui_mat_pred <- matrix(NA, nrow = nrow(ui_mat), ncol=ncol(ui_mat))
 for (i in 1:nrow(ui_mat_pred)){
-  ui_mat_pred[i, ] <- unname(unlist(x[i] + x[(length(u_means_vec)+1):length(x)]))
+  #ui_mat_pred[i, ] <- unname(unlist(x[i] + x[(length(u_means_vec)+1):length(x)]))   #without intercept
+  ui_mat_pred[i, ] <- unname(unlist(x[1] + x[i+1] + x[(length(u_means_vec)+2):length(x)]))   #with intercept
 }
 ui_mat_pred[ui_mat_pred<1] <- 1
 ui_mat_pred[ui_mat_pred>5] <- 5
@@ -109,17 +116,24 @@ i_sums_vec <- colSums(train_mat, na.rm=T)
 ui_sums_vec <- c(u_sums_vec, i_sums_vec)
 
 ### Set up solvable matrix version of Bayes / ridge regression
-K <- 1
+K <- 3
 A <- train_mat_bin
 diag(A) <- diag(A) + K
 b <- unname(ui_sums_vec)
 b <- b + c(rep(mean_u_means, length(u_means_vec)), rep(mean_i_means, length(i_means_vec))) * K
+#----------
+#add intercept by adding a row and column to A which is total number of ratings (including the added Bayes ratings) concatenated with diagonal of A (on both sides)
+#and add a value to b which is total sum of ratings (including the added Bayes ratings)
+A <- rbind(cbind(length(which(!is.na(train_mat))) + length(diag(A))*K, t(diag(A))), cbind(diag(A), A))
+b <- c(sum(u_sums_vec) + sum(c(rep(mean_u_means, length(u_means_vec)), rep(mean_i_means, length(i_means_vec))) * K), b)
+#----------
 x <- solve(A, b)
 
 ### Use values to predict
 train_mat_pred <- matrix(NA, nrow = nrow(train_mat), ncol=ncol(train_mat))
 for (i in 1:nrow(train_mat_pred)){
-  train_mat_pred[i, ] <- unname(unlist(x[i] + x[(length(u_means_vec)+1):length(x)]))
+  #train_mat_pred[i, ] <- unname(unlist(x[i] + x[(length(u_means_vec)+1):length(x)]))   #without intercept
+  train_mat_pred[i, ] <- unname(unlist(x[1] + x[i+1] + x[(length(u_means_vec)+2):length(x)]))   #with intercept
 }
 train_mat_pred[train_mat_pred<1] <- 1
 train_mat_pred[train_mat_pred>5] <- 5
