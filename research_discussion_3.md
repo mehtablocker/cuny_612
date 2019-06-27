@@ -46,7 +46,7 @@ empirical data does not support it.
 As usual, there may be exceptions. In particular statistical models that
 have influence over people’s civil liberties (e.g., the examination of
 recidivism rates, etc.) might require special scrutiny and treatment.
-But that should usually be the exception and not the rule. By and large
+But these should usually be the exception and not the rule. By and large
 models that rely on empirical data should not be “fudged” to reflect one
 particular view of morality.
 
