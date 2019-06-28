@@ -9,10 +9,10 @@ user likes or says they like. Using that information as a tool for
 prediction, it is a feature (not a bug) of the model to predict that
 users will like items similar to what they have liked in the past. If I
 like books on sports, a model that recommends me books on sports will
-usually be more accurate than a model that recommends me book on plants.
-We can also see how this might create a feedback loop where I read only
-sports books, thereby reinforcing the model that recommends me more
-sports
+usually be more accurate than a model that recommends me books on
+plants. We can also see how this might create a feedback loop where I
+read only sports books, thereby reinforcing the model that recommends me
+more sports
 books.
 
 ## Reflecting on the techniques we have covered, do you think recommender systems reinforce or help to prevent unethical targeting or customer segmentation?
