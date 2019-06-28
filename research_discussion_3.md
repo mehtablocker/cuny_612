@@ -33,16 +33,16 @@ out.
 The reason for my view is simple. I believe it imperative for empirical
 science to remain unpolluted and separate from morality (at least as
 separate as possible.) While it may or may not be politically correct to
-say “Men prefer sports books more than women”, I believe the empirical
-truth of the statement should stand on its own. It is a completely
-different statement to say “Men *should* prefer sports books more than
-women.” The latter is a declaration of morality. This morality should
-always be evaluated and challenged by us as a society. If we believe
-there should be more women interested in sports we should absolutely
-bring the subject to the foreground and raise awareness. I do not
-believe a company whose sole business is making a profit selling books
-has a moral obligation to recommend more sports books to women if the
-empirical data does not support it.
+say “Men prefer sports books more than women do”, I believe the
+empirical truth of the statement should stand on its own. It is a
+completely different statement to say “Men *should* prefer sports books
+more than women do.” The latter is a declaration of morality. This
+morality should always be evaluated and challenged by us as a society.
+If we believe there should be more women interested in sports we should
+absolutely bring the subject to the foreground and raise awareness. I do
+not believe a company whose sole business is making a profit selling
+books has a moral obligation to recommend more sports books to women if
+the empirical data does not support it.
 
 As usual, there may be exceptions. In particular statistical models that
 have influence over people’s civil liberties (e.g., the examination of
