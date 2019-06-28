@@ -20,7 +20,7 @@ books.
 As mentioned above, it is often the intent of a recommendation system to
 reinforce past behavior. Whether this in and of itself can be considered
 unethical is a debatable topic. My own personal stance on the general
-subject is: I believe the obligation is largely on us as people (and
+subject is: I believe the obligation is largely on us as people (the
 users of science, math, and technology) to be aware of and combat
 confirmation bias and other ethical issues. I do not believe it is the
 duty of companies, corporations, technology, statistical models, or data
