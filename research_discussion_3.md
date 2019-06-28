@@ -20,10 +20,11 @@ books.
 As mentioned above, it is often the intent of a recommendation system to
 reinforce past behavior. Whether this in and of itself can be considered
 unethical is a debatable topic. My own personal stance on the general
-subject is: I believe the obligation is largely on us as people (the
-users of science, math, and technology) to be aware of and combat
-confirmation bias and other ethical issues. I do not believe it is the
-duty of companies, corporations, technology, statistical models, or data
+subject is:  
+I believe the obligation is largely on us as people (the users of
+science, math, and technology) to be aware of and combat confirmation
+bias and other ethical issues. I do not believe it is the duty of
+companies, corporations, technology, statistical models, or data
 scientists to inject morality into our lives. If I read too many books
 on sports, it is my responsibility to recognize this and branch out. It
 is not the responsibility of a recommender system to force me to branch
