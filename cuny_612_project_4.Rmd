@@ -26,7 +26,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ###Intro
 
-__For this project we will explore the use of matrix factorization methods in the building of collaborative filtering-based recommender systems for movie ratings.__
+__For this project we will build recommender systems using matrix factorization methods on collaborative filtering models. We will also experiment with adding diversity to recommendations.__
 
 <br>
 
@@ -132,10 +132,49 @@ train_mat_norm <- train_mat - baseline   #can go back to keeping NA values
 f_svd_list_train <- funkSVD(train_mat_norm, k = k)
 train_mat_norm_comp <- f_svd_list_train$U %*% t(f_svd_list_train$V)
 dimnames(train_mat_norm_comp) <- dimnames(train_mat_norm)
-train_mat_pred <- train_mat_norm_comp + baseline
-train_mat_pred[train_mat_pred<1] <- 1
-train_mat_pred[train_mat_pred>5] <- 5
-rmse_test <- rmse(train_mat_pred, test_mat, rmna=T)
-rmse_test
+train_mat_pred_sgd <- train_mat_norm_comp + baseline
+train_mat_pred_sgd[train_mat_pred_sgd<1] <- 1
+train_mat_pred_sgd[train_mat_pred_sgd>5] <- 5
+rmse_test_sgd <- rmse(train_mat_pred_sgd, test_mat, rmna=T)
+rmse_test_sgd
 
 ```
+
+The two matrix factorization models performed best, so we continue with those.
+
+<br>
+
+###Add diversity
+
+Recommendations of items would normally be based on the predicted ratings, which are modelled on previous ratings. One potential drawback of this is a "feedback loop" in which users are never encouraged to branch out from items similar to past items. We can break this feedback loop and add diversity to the recommendations by taking some extremely dissimilar items and "bumping them up." Here we test this by changing a small percentage of the lowest predicted ratings to average ratings and then re-calculating the RMSE on Test data.
+
+```{r add_div}
+pct_div <- 0.01
+
+### Change SVD predictions
+div_inds <- order(train_mat_pred) %>% head(pct_div * length(train_mat_pred))
+train_mat_pred_div <- train_mat_pred
+train_mat_pred_div[div_inds] <- global_mean
+
+### Change SGD predictions
+div_inds <- order(train_mat_pred_sgd) %>% head(pct_div * length(train_mat_pred_sgd))
+train_mat_pred_sgd_div <- train_mat_pred_sgd
+train_mat_pred_sgd_div[div_inds] <- global_mean
+
+### Calculate RMSE
+rmse_test_div <- rmse(train_mat_pred_div, test_mat, rmna=T)
+rmse_test_div
+rmse_test_sgd_div <- rmse(train_mat_pred_sgd_div, test_mat, rmna=T)
+rmse_test_sgd_div
+
+```
+
+The RMSE is a little worse after adding diversity to the ratings, which is not surprising since we were purposely contradicting our optimized model for a few items.
+
+<br>
+
+###Conclusion
+
+Using the FilmTrust data of movie ratings, we split and normalized our dataset and then built several different ratings prediction models. After comparing each of their RMSE on the Test data, we then added diversity to the predicted ratings of the two advanced models and re-calculated the RMSE. Unsurprisingly, the RMSE was a little worse after adding diversity.  
+
+One thing that should be noted is the concept of selection bias. Our RMSE calculations were done on Test data for which users were not actually given diversified recommendations. If we had the ability to do online evaluation, our out-of-sample data would be a better representation of our methods, and we could more accurately test the consequences of the diversity addition to our recommendations.
