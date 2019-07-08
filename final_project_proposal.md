@@ -1,7 +1,7 @@
 Final Project Proposal
 ================
 
-## Using a linear regression to calculate user and item biases in a recommender system
+## Using a linear regression to calculate user and item biases in a collaborative-filtering recommender system
 
 #### Intro
 
