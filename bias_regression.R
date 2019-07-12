@@ -122,7 +122,8 @@ diag(A) <- diag(A) + K
 b <- unname(ui_sums_vec)
 b <- b + c(rep(mean_u_means, length(u_means_vec)), rep(mean_i_means, length(i_means_vec))) * K
 #----------
-#add intercept by adding a row and column to A which is total number of ratings (including the added Bayes ratings) concatenated with diagonal of A (on both sides)
+#add intercept by adding a row and column to A which is total number of ratings (including the added Bayes ratings) 
+###concatenated on both sides with number of user (item) ratings (in this case it is diagonal of A matrix is all 1s and 0s, so don't need to worry about squared terms, 1^2=1)
 #and add a value to b which is total sum of ratings (including the added Bayes ratings)
 A <- rbind(cbind(length(which(!is.na(train_mat))) + length(diag(A))*K, t(diag(A))), cbind(diag(A), A))
 b <- c(sum(u_sums_vec) + sum(c(rep(mean_u_means, length(u_means_vec)), rep(mean_i_means, length(i_means_vec))) * K), b)
