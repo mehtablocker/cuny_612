@@ -174,3 +174,7 @@ below_1_inds = np.argwhere(train_mat_pred_simp_sgd<1)
 train_mat_pred_simp_sgd[below_1_inds[:,0], below_1_inds[:,1]] = 1
 above_5_inds = np.argwhere(train_mat_pred_simp_sgd>5)
 train_mat_pred_simp_sgd[above_5_inds[:,0], above_5_inds[:,1]] = 5
+
+### RMSE on test data for standard baseline
+rmse_test_simp_sgd = rmse(train_mat_pred_simp_sgd, test_mat, rmna=False)
+print(rmse_test_simp_sgd)
