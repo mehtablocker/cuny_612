@@ -10,7 +10,7 @@ b <- rnorm(n, 0, 4)
 ### Solve
 cov_Ab <- (1/n) * t(A) %*% b - cbind(colMeans(A)) %*% cbind(mean(b))
 var_A <- (1/n) * t(A) %*% A - cbind(colMeans(A)) %*% colMeans(A)
-coefs <- solve(var_A) %*% cov_Ab
+coefs <- solve(var_A, cov_Ab)
 slope <- mean(b) - colMeans(A) %*% coefs
 
 ### Compare to lm
